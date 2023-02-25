@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PrototypeFormApp": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
