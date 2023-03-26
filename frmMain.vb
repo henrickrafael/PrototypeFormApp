@@ -3,9 +3,9 @@ Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
 Public Class FrmMain
-    Private ReadOnly firstFileContent As New List(Of String)
-    Private ReadOnly secondFileContent As New List(Of String)
-    Private pathFile As String = GetPathFromFile()
+    Private _pathFile As String = GetPathFromFile()
+    Private ReadOnly _firstFileContent As New List(Of String)
+    Private ReadOnly _secondFileContent As New List(Of String)
 
     Private Shared Function GetFileContentToList(fileContent As List(Of String)) As Task
         Try
@@ -31,16 +31,16 @@ Public Class FrmMain
     End Function
 
     Private Async Sub SelectFile_Click(sender As Object, e As EventArgs) Handles SelectFile.Click
-        Await GetFileContentToList(firstFileContent)
+        Await GetFileContentToList(_firstFileContent)
     End Sub
 
     Private Async Sub SecondFile_ClickAsync(sender As Object, e As EventArgs) Handles SecondFile.Click
-        Await GetFileContentToList(secondFileContent)
+        Await GetFileContentToList(_secondFileContent)
     End Sub
 
     Private Sub ClearGlobals()
-        firstFileContent.Clear()
-        secondFileContent.Clear()
+        _firstFileContent.Clear()
+        _secondFileContent.Clear()
     End Sub
 
     Private Shared Function ReturnFullPathFileName(path As String) As String
@@ -48,58 +48,72 @@ Public Class FrmMain
     End Function
 
     Private Shared Function GetPathFromFile() As String
-        Dim json = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration\config.json"))
-        Dim jsonObject = JObject.Parse(json)
+        Dim isFirstConfigFileCreated As Boolean = CreateFileIfNotExists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"))
+
+        If isFirstConfigFileCreated Then
+            SaveConfigurationFile(String.Empty, True)
+        End If
+
+        Dim json As String = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"))
+        Dim jsonObject As JObject = JObject.Parse(json)
 
         Return jsonObject.SelectToken("defaultPath").ToString()
     End Function
 
     Private Function ValidateListContent() As Boolean
+        Dim isValid As Boolean = _firstFileContent.Any AndAlso _secondFileContent.Any
 
-        If Not firstFileContent.Any OrElse Not secondFileContent.Any Then
+        If Not isValid Then
             MessageBox.Show("Um dos arquivos não foi selecionado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
             ClearGlobals()
 
             Return False
         End If
 
-        Return True
+        Return isValid
     End Function
 
-    Private Sub CreateTextFile(result As List(Of String))
-        pathFile = ReturnFullPathFileName(pathFile)
-
-        If Not File.Exists(pathFile) Then
-            Using fileStream As FileStream = File.Create(pathFile)
-            End Using
-        End If
+    Private Sub WriteTextFile(result As List(Of String))
+        Dim pathFile As String = ReturnFullPathFileName(_pathFile)
+        CreateFileIfNotExists(pathFile)
 
         Using sw As New StreamWriter(pathFile)
-
             For Each line In result
                 sw.WriteLine(line)
             Next
+
         End Using
 
     End Sub
 
-    Private Sub SaveConfigurationFile(selectedPath As String)
+    Private Shared Function CreateFileIfNotExists(path As String) As Boolean
+        If Not File.Exists(path) Then
+            Using fileStream As FileStream = File.Create(path)
+            End Using
 
-        If String.IsNullOrWhiteSpace(selectedPath) Then
+            Return True
+        End If
+
+        Return False
+    End Function
+
+    Private Shared Function GenerateJsonConfigFile(value As String) As String
+        Return JsonConvert.SerializeObject(New With {.defaultPath = value})
+    End Function
+
+    Private Shared Sub SaveConfigurationFile(selectedPath As String, Optional isFirstBuild As Boolean = False)
+
+        If String.IsNullOrWhiteSpace(selectedPath) AndAlso Not isFirstBuild Then
             Return
         End If
 
-        Dim configFile = New With {
-            .defaultPath = selectedPath
-        }
+        Dim localPath As String = If(isFirstBuild, String.Empty, selectedPath)
+        Dim jsonString As String = GenerateJsonConfigFile(localPath)
 
-        Dim jsonString As String = JsonConvert.SerializeObject(configFile)
-
-        Using sw As New StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration\config.json"))
+        Using sw As New StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"))
             sw.WriteLine(jsonString)
         End Using
 
-        pathFile = configFile.defaultPath
     End Sub
 
     Private Sub BtnRegerar_Click(sender As Object, e As EventArgs) Handles BtnRegerar.Click
@@ -112,9 +126,9 @@ Public Class FrmMain
                 Return
             End If
 
-            For Each searchString In secondFileContent
+            For Each searchString In _secondFileContent
 
-                For Each linha In firstFileContent
+                For Each linha In _firstFileContent
 
                     If linha.Contains(searchString) Then
                         lineIndex += 1
@@ -128,10 +142,10 @@ Public Class FrmMain
 
             Next
 
-            CreateTextFile(result)
+            WriteTextFile(result)
             ClearGlobals()
-            result.Clear()
 
+            result.Clear()
             MessageBox.Show("Arquivo gerado com sucesso!", "Processo concluído", MessageBoxButtons.OK, MessageBoxIcon.Information)
 
         Catch ex As Exception
@@ -139,7 +153,7 @@ Public Class FrmMain
         End Try
     End Sub
 
-    Private Sub LinkLabelOutput_Click(sender As Object, e As EventArgs) Handles LinkLabelOutput.Click
+    Private Shared Sub LinkLabelOutput_Click(sender As Object, e As EventArgs) Handles LinkLabelOutput.Click
         Try
             Using fbd As New FolderBrowserDialog
                 Dim result As DialogResult = fbd.ShowDialog()
