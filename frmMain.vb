@@ -97,8 +97,8 @@ Public Class FrmMain
         Return False
     End Function
 
-    Private Shared Function GenerateJsonConfigFile(value As String) As String
-        Return JsonConvert.SerializeObject(New With {.defaultPath = value})
+    Private Shared Function GenerateJsonConfigFile(obj As Object) As String
+        Return JsonConvert.SerializeObject(obj)
     End Function
 
     Private Shared Sub SaveConfigurationFile(selectedPath As String, Optional isFirstBuild As Boolean = False)
@@ -108,7 +108,7 @@ Public Class FrmMain
         End If
 
         Dim localPath As String = If(isFirstBuild, String.Empty, selectedPath)
-        Dim jsonString As String = GenerateJsonConfigFile(localPath)
+        Dim jsonString As String = GenerateJsonConfigFile(New With {.defaultPath = localPath})
 
         Using sw As New StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json"))
             sw.WriteLine(jsonString)
@@ -117,6 +117,12 @@ Public Class FrmMain
     End Sub
 
     Private Sub BtnRegerar_Click(sender As Object, e As EventArgs) Handles BtnRegerar.Click
+
+        If String.IsNullOrWhiteSpace(_pathFile) Then
+            LinkLabelOutput_Click(Nothing, Nothing)
+            _pathFile = GetPathFromFile()
+        End If
+
         Dim numericInputValue As Integer = Integer.Parse(NumericInput.Value)
         Dim result As New List(Of String)
         Dim lineIndex As Integer
