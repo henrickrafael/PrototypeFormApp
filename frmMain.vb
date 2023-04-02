@@ -15,13 +15,15 @@ Public Class FrmMain
 
             ofd.ShowDialog()
 
-            Using sr As New StreamReader(ofd.FileName)
+            If Not String.IsNullOrWhiteSpace(ofd.FileName) Then
+                Using sr As New StreamReader(ofd.FileName)
 
-                While Not sr.EndOfStream
-                    fileContent.Add(sr.ReadLine.Trim())
-                End While
+                    While Not sr.EndOfStream
+                        fileContent.Add(sr.ReadLine.Trim())
+                    End While
 
-            End Using
+                End Using
+            End If
 
         Catch ex As Exception
             MessageBox.Show(ex.ToString(), "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error)
